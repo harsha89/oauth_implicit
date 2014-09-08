@@ -1,0 +1,134 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+    <head>
+        <title>js oauth demo</title>
+        <meta http-equiv="content-type" content="text/html; charset=utf-8">
+        <style>
+            *{font-size:14px;}
+        </style>
+        <script src="http://code.jquery.com/jquery-latest.min.js"></script>
+        <script type="text/javascript">
+            $().ready(function (){
+                var fragment = window.location.hash;
+                var fragment_paramters = {};
+                if (fragment == '') {
+                    //replace your api key
+                    var  client_id = '7CVhlUQ89ohQ4P9quWxXdHBC62Aa';
+                    
+                    var  oauth_gateway = ' https://localhost:8243/authorize';
+                    var  response_type = 'token';
+                    var  redirect_uri = encodeURIComponent(window.location);//callback is current url
+                    var  display = 'page';
+                    var  auth_url =  oauth_gateway + '?' + 
+                        'client_id=' + client_id +
+                        '&response_type=' + response_type + 
+                        '&redirect_uri=' + redirect_uri + 
+                        '&display=' + display;
+                    $('p').hide();
+                    $('#oauth').show();
+                    $('#oauth > a').attr('href', auth_url);
+                    
+                } else {
+                    $('#oauth').hide();
+                    window.location.hash = fragment;
+                    //set the location hash to js object (key=>value)
+                    init_paramters();
+                    
+                    //call the api
+                    $('#get_user_info').live('click', function (){
+                        //get access token from  location hash var list
+                        var access_token = fragment_paramters['access_token'];
+                        //get user info
+                        var paramters = {
+                            format:"json", //system paramter
+                            access_token:access_token,//system  paramter
+                            timestamp:Math.round(new Date().getTime()/1000),//system paramter
+                            userid:19076  //api paramter
+                        };
+                        var api_url = 'https://www.matchmove.com/oauth/Users/getInfo';
+                        $.ajax({
+                            url: api_url,
+                            type: 'GET',
+                            cache:true,
+                            dataType: 'jsonp',
+                            //                                jsonpCallback:"mycallback",
+                            data:paramters,
+                            success: function(data) { 
+                                //data is a json
+                                $('#result').val(JSONFormat(data));
+                                $('#rhtml').html(
+                                                    'Id :'+data.userid + '<br />' +
+                                                    'Name: '+data.displayname + '<br />' +
+                                                    'Image: <img src="'+data.imgurl + '" /><br />' +
+                                                    'Gender:'+ (data.gender ? 'male' : 'female') + '<br />'
+                                                );
+                            },
+                            error: function(XMLHttpRequest, textStatus, errorThrown) { 
+                                alert('failed' + textStatus);
+                            }
+                        });
+                    });
+                }
+                
+                //init parse  url fragment, fragment: 
+                function init_paramters() {
+                    var  qs= fragment.substring(1,fragment.length);
+                    var  qs_arr = qs.split("&");
+                    for (var i in qs_arr) {
+                        var t_arr = qs_arr[i].split('=');
+                        if (typeof(t_arr[0]) != 'undefined') {
+                            fragment_paramters[t_arr[0]] = (typeof(t_arr[1]) == 'undefined' ? '' : t_arr[1]);
+                        }
+                    }
+                }
+                
+                //format json for human readable
+                function JSONFormat(json, l) {
+                    if (!l)
+                        l = 0;
+                    var tab = '';
+                    for(var i=0; i<l; i++)
+                        tab += '  ';
+                    var oCon = json.constructor;
+                    var p1 = null;
+                    var v = null;
+                    var pCon = null;
+                    var s = tab + (oCon == Object ? '{' : '[');
+                    for(var p in json) {
+                        pCon = json[p].constructor;
+                        if (oCon == Array && !/^\d+$/.test(p))
+                            continue;
+                        p1 = /\s/.test(p) ? '\'' + p + '\'' : p;
+                        if (oCon == Array)
+                            s += '\n' + tab + '  ';
+                        else
+                            s += '\n' + tab + '  ' + p1 + ': ';
+                        if (pCon == Object || pCon == Array)
+                            s += '\n' + JSONFormat(json[p], l + 2) + ',';
+                        else if (pCon == Function) {
+                            s += '\n' + tab + '    ' + json[p].toString().replace(/\n/g, '\n    ' + tab) + ',';
+                        }
+                        else {
+                            v = pCon == String ? '\'' + json[p] + '\'' : json[p];
+                            s += v + ',';
+                        }
+                    }
+                    s = s.substring(0, s.length - 1);
+                    s += '\n' + tab + (oCon == Object ? '}' : ']');
+                    return s;
+                }
+                
+            });
+        </script>
+    </head>
+    <body>
+        <p id="oauth">
+            <a href="#">location to  authorization</a>
+        </p>
+        <p>
+            <a href="javascript:;" id="get_user_info">get user info</a>
+        </p>
+        <p><textarea id="result" style="width:400px;height:200px;">here is result</textarea></p>
+        <p id="rhtml"></p>
+    </body>
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+<head>
+    <title>Shopping Cart Sample (API Manager Impicit Grant)</title>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <script type="text/javascript" src="js/kickstart.js"></script>                                  <!-- KICKSTART -->
+    <link rel="stylesheet" type="text/css" href="css/kickstart.css" media="all" />                  <!-- KICKSTART -->
+    <script src="http://code.jquery.com/jquery-latest.min.js"></script>
+
+    <style>
+        #header {
+            background: #32c2e1;
+            border-style: solid;
+            border-color: #5696e1;
+            height:50px;
+        }
+        *{font-size:14px;}
+    </style>
+    <script type="text/javascript">
+        var fragment;
+        var fragment_paramters;
+        function sendTokenRequest() {
+            //replace your api key
+            var  client_id = 'Jhn7Ox68kU8kCgLWZogZdgtgPuQa';
+            var  oauth_gateway = 'https://localhost:8243/authorize';
+            var  redirect_uri = window.location;
+            if(client_id==null || client_id == '') {
+                alert("Client Id cannot be empty")
+            }
+            if(oauth_gateway==null || oauth_gateway == '') {
+                alert("Gateway Url cannot be empty")
+            }
+            if(redirect_uri==null || redirect_uri == '') {
+                alert("Redirect Url cannot be empty")
+            }
+            var  response_type = 'token';
+            redirect_uri = encodeURIComponent(redirect_uri);
+            var  display = 'page';
+            var  auth_url =  oauth_gateway + '?' +
+                    'client_id=' + client_id +
+                    '&response_type=' + response_type +
+                    '&redirect_uri=' + redirect_uri +
+                    '&display=' + display;
+            window.location.href = auth_url;
+        }
+
+        function sendAPIRequest() {
+                //get access token from  location hash var list
+            var access_token = fragment_paramters['access_token'];
+                //get user info
+                var api_url = 'http://localhost:8280/myshop/1.0.0/mygoods';
+                if(api_url==null || api_url=='') {
+                    alert("API Url Cannot be empty")
+                }
+
+            $.ajax({
+                url: api_url,
+                dataType: 'json',
+                success: function(data, status) {
+                    setTableData(data);
+                },
+                beforeSend: function(xhr, settings) { xhr.setRequestHeader('Authorization','Bearer ' + access_token); }
+            });
+        }
+
+        function setTableData(data) {
+            var json = data.data;
+            $(function () {
+                var content = '';
+                for (var i = 0; i < json.length; i++) {
+                    content += '<tr>';
+                    content += '<td>' + json[i].ItemName + '</td>';
+                    content += '<td>' + json[i].Date + '</td>';
+                    content += '<td>' + json[i].Price + '</td>';
+                    content += '</tr>';
+                }
+                // content += '</tbody>';-- **superfluous**
+                //$('table tbody').replaceWith(content);  **incorrect..**
+                $('#myTable tbody').html(content);  // **better. give the table a ID, and replace**
+            });
+        }
+        $().ready(function (){
+            fragment = window.location.hash;
+            fragment_paramters = {};
+            if (fragment == '') {
+                $('#api_data').hide();
+                $('#grant_data').show();
+            } else {
+                $('#grant_data').hide();
+                $('#api_data').show();
+                window.location.hash = fragment;
+                //set the location hash to js object (key=>value)
+                init_paramters();
+                sendAPIRequest();
+            }
+        });
+
+        //init parse  url fragment, fragment:
+        function init_paramters() {
+            var  qs= fragment.substring(1,fragment.length);
+            var  qs_arr = qs.split("&");
+            for (var i in qs_arr) {
+                var t_arr = qs_arr[i].split('=');
+                if (typeof(t_arr[0]) != 'undefined') {
+                    fragment_paramters[t_arr[0]] = (typeof(t_arr[1]) == 'undefined' ? '' : t_arr[1]);
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+<div id="header">
+    <h3 align="left">Shopping Cart Sample (API Manager Impicit Grant)</h3>
+</div>
+<div id="grant_data" style="width: 400px">
+    <form id = "oauth_data" style="margin-left:30px;">
+        <table class="table" width="50">
+            <tbody>
+            <tr>
+                <td>
+                    <b>View My Purchase Items</b>
+                </td>
+                <td>
+                    <input type="button" style="float: right;" value="Access Data" onclick="sendTokenRequest()">
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </form>
+</div>
+<div id="api_data" style="width: 400px">
+    <table class="table" width="50" id="myTable">
+        <thead>
+        <th>Item Name</th>
+        <th>Purchase Date</th>
+        <th>Price</th>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>
